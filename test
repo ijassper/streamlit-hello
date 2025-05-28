@@ -1,0 +1,21 @@
+from google.colab import files
+import openai
+
+uploaded = files.upload()
+filename = list(uploaded.keys())[0]
+
+with open(filename, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+openai.api_key = "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"  # 개인 키 입력
+
+response = openai.ChatCompletion.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "너는 교육 문서 전문가야. 교사의 수업 계획서에 논리적 피드백을 제공해줘."},
+        {"role": "user", "content": content}
+    ]
+)
+
+print("💡 AI 피드백:\n")
+print(response.choices[0].message.content)
