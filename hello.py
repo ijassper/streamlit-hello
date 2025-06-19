@@ -51,4 +51,11 @@ if prompt := st.chat_input("What is up?"):
                     placeholder.markdown(full_response)
 
             # 응답 저장
-            st.ses
+            st.session_state.messages.append(
+                {"role": "assistant", "content": full_response}
+            )
+
+        except RateLimitError:
+            st.error("⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+        except Exception as e:
+            st.error(f"❌ 오류 발생: {e}")
