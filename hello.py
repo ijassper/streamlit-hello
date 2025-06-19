@@ -44,17 +44,11 @@ if prompt := st.chat_input("What is up?"):
             placeholder = st.empty()
 
             for chunk in stream:
-                if hasattr(chunk.choices[0].delta, "content"):
-                    content = chunk.choices[0].delta.content
+                # 안전하게 content 추출
+                content = getattr(chunk.choices[0].delta, "content", None)
+                if content:
                     full_response += content
                     placeholder.markdown(full_response)
 
             # 응답 저장
-            st.session_state.messages.append(
-                {"role": "assistant", "content": full_response}
-            )
-
-        except RateLimitError:
-            st.error("⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
-        except Exception as e:
-            st.error(f"❌ 오류 발생: {e}")
+            st.ses
