@@ -41,10 +41,13 @@ if prompt := st.chat_input("What is up?"):
 
             # 응답을 점차 출력하고, 전체 텍스트 누적
             full_response = ""
+            placeholder = st.empty()
+
             for chunk in stream:
-                content = chunk.choices[0].delta.get("content", "")
-                full_response += content
-                st.write(content, end="")
+                if hasattr(chunk.choices[0].delta, "content"):
+                    content = chunk.choices[0].delta.content
+                    full_response += content
+                    placeholder.markdown(full_response)
 
             # 응답 저장
             st.session_state.messages.append(
