@@ -1,7 +1,7 @@
 from openai import OpenAI, RateLimitError
 import streamlit as st
 
-st.set_page_config(page_title="ChatGPT Clone", layout="wide")
+st.set_page_config(page_title="나만의 챗GPT", layout="wide")
 
 st.title("ChatGPT-like clone")
 
