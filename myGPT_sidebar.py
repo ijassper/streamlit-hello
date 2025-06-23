@@ -3,7 +3,7 @@ import streamlit as st
 
 st.set_page_config(page_title="나만의 챗GPT", layout="wide")
 
-st.title("ChatGPT-like clone")
+st.title("GPT만들기 프로젝트")
 
 # API 키 로드
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
