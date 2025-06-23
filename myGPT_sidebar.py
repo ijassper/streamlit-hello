@@ -3,10 +3,10 @@ import streamlit as st
 
 st.set_page_config(page_title="ChatGPT Clone", layout="wide")
 
-# 🧼 CSS: 중앙 입력창용, 입력창 폭 제한
+# ✅ CSS 스타일
 st.markdown("""
     <style>
-    .centered-input-container {
+    .centered-input {
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -14,17 +14,14 @@ st.markdown("""
         height: 80vh;
         text-align: center;
     }
-    [data-testid="stChatInput"] {
-        max-width: 700px;
-        margin: 0 auto;
+    .centered-input input {
+        width: 500px !important;
+        text-align: center;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 📌 API 설정
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# 상태 초기화
+# ✅ 세션 상태
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo"
 if "messages" not in st.session_state:
@@ -32,7 +29,9 @@ if "messages" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# 🔹 사이드바: 대화 기록
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+# ✅ 사이드바
 with st.sidebar:
     st.header("💬 대화 기록")
     if st.session_state.history:
@@ -45,26 +44,24 @@ with st.sidebar:
         st.session_state.messages.clear()
         st.experimental_rerun()
 
-# 🔹 1. 첫 화면 (대화 전)
-if not st.session_state.messages:
-    st.markdown('<div class="centered-input-container">', unsafe_allow_html=True)
+# ✅ 첫 대화 전: 화면 중앙 입력창 사용
+if len(st.session_state.messages) == 0:
+    st.markdown('<div class="centered-input">', unsafe_allow_html=True)
     st.title("💬 ChatGPT-like Clone")
-    st.subheader("무엇이 궁금한가요?")
-    user_input = st.chat_input("여기에 입력하세요...")
+    user_first_input = st.text_input("무엇이 궁금한가요?", key="initial_input")
+    if st.button("▶️ 시작하기"):
+        if user_first_input:
+            st.session_state.messages.append({"role": "user", "content": user_first_input})
+            st.experimental_rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        st.experimental_rerun()
-
-# 🔹 2. 채팅 화면 (대화 시작 후)
+# ✅ 이후: 일반 채팅 UI
 else:
-    # 이전 메시지 렌더링
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # 입력 받기 (하단 고정)
+    # 프롬프트 입력
     if prompt := st.chat_input("질문을 입력하세요..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
@@ -74,21 +71,26 @@ else:
             try:
                 stream = client.chat.completions.create(
                     model=st.session_state["openai_model"],
-                    messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+                    messages=[
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ],
                     stream=True,
                 )
+
                 full_response = ""
                 placeholder = st.empty()
+
                 for chunk in stream:
                     content = getattr(chunk.choices[0].delta, "content", None)
                     if content:
                         full_response += content
                         placeholder.markdown(full_response)
 
-                # 응답 저장
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": full_response}
+                )
 
-                # 요약 저장
                 summary = prompt[:30] + ("..." if len(prompt) > 30 else "")
                 st.session_state.history.append({
                     "title": summary,
