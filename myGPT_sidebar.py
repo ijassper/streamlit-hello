@@ -1,97 +1,98 @@
 from openai import OpenAI, RateLimitError
 import streamlit as st
+from datetime import datetime
 
-# 페이지 설정 및 커스텀 CSS 주입
-st.set_page_config(page_title="나만의 챗GPT", layout="wide")
+# 페이지 설정
+st.set_page_config(page_title="나만의 ChatGPT", layout="wide")
 
-# CSS로 입력창 폭 제한 및 가운데 정렬
-st.markdown("""
-    <style>
-    .block-container {
-        padding-top: 2rem;
-    }
-
-    /* 입력창 영역을 감싸는 div */
-    [data-testid="stChatInput"] {
-        max-width: 700px;
-        margin: 0 auto;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-st.title("GPT만들기 프로젝트")
-
-# API 키 로드
+# 💾 API 키 로드
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# 모델 설정
+# 🧠 모델 설정
 if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-3.5-turbo"
+    st.session_state["openai_model"] = "gpt-4o"
 
-# 메시지 세션 초기화
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# 💬 대화 저장소 초기화
+if "conversations" not in st.session_state:
+    st.session_state["conversations"] = {}
 
-# 대화 히스토리 요약 목록 (간단한 요약만 저장)
-if "history" not in st.session_state:
-    st.session_state.history = []
+# ▶️ 현재 대화 ID 설정
+if "current_conversation" not in st.session_state:
+    default_name = datetime.now().strftime("대화 %Y-%m-%d %H:%M:%S")
+    st.session_state["current_conversation"] = default_name
+    st.session_state["conversations"][default_name] = []
 
-# 사이드바에 채팅 요약 목록 표시
+# 🧭 사이드바: 대화 선택 및 새로 만들기
 with st.sidebar:
-    st.header("💬 대화 기록")
-    if st.session_state.history:
-        for i, item in enumerate(st.session_state.history):
-            if st.button(item, key=f"history_{i}"):
-                # 기록을 클릭하면 해당 내용을 메시지로 복원
-                st.session_state.messages = item["full"]
-                st.experimental_rerun()
-    if st.button("🗑️ 기록 초기화"):
-        st.session_state.history.clear()
-        st.session_state.messages.clear()
-        st.experimental_rerun()
+    st.header("🗂️ 대화 이력")
+    selected = st.radio(
+        "기존 대화 선택",
+        options=list(st.session_state["conversations"].keys()),
+        index=list(st.session_state["conversations"].keys()).index(st.session_state["current_conversation"]),
+    )
+    if selected != st.session_state["current_conversation"]:
+        st.session_state["current_conversation"] = selected
 
-# 이전 메시지 렌더링
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    if st.button("➕ 새 대화 시작"):
+        new_name = datetime.now().strftime("대화 %Y-%m-%d %H:%M:%S")
+        st.session_state["conversations"][new_name] = []
+        st.session_state["current_conversation"] = new_name
 
-# 사용자 입력 처리
-if prompt := st.chat_input("What is up?"):
-    # 사용자 메시지 저장 및 표시
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+# 👉 채팅 영역: 가운데만 사용
+left_col, center_col, right_col = st.columns([1, 2, 1])
 
-    # 어시스턴트 응답 처리
-    with st.chat_message("assistant"):
-        try:
-            # 스트리밍 응답 생성
-            stream = client.chat.completions.create(
-                model=st.session_state["openai_model"],
-                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
-                stream=True,
-            )
+with center_col:
+    # ✅ 입력창 CSS 스타일 조정
+    st.markdown("""
+        <style>
+        textarea[data-testid="stChatInput"] {
+            width: 400px !important;
+            height: 200px !important;  /* ✅ 이 줄 추가 */
+            margin: auto !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
-            # 응답 점차 출력 및 누적
-            full_response = ""
-            placeholder = st.empty()
-            for chunk in stream:
-                content = getattr(chunk.choices[0].delta, "content", None)
-                if content:
-                    full_response += content
-                    placeholder.markdown(full_response)
+    # 여백
+    st.markdown("<div style='height: 800px;'></div>", unsafe_allow_html=True)
 
-            # 응답 저장
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+    st.title("나만의 ChatGPT")
 
-            # 요약 저장 (사이드바용)
-            summary = prompt[:30] + ("..." if len(prompt) > 30 else "")
-            st.session_state.history.append({
-                "title": summary,
-                "full": st.session_state.messages.copy()
-            })
+    # 현재 대화 불러오기
+    messages = st.session_state["conversations"][st.session_state["current_conversation"]]
 
-        except RateLimitError:
-            st.error("⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
-        except Exception as e:
-            st.error(f"❌ 오류 발생: {e}")
+    # 💬 이전 메시지 출력
+    for message in messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # 📥 사용자 입력 및 처리
+    if prompt := st.chat_input("메시지를 입력하세요."):
+        messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # 🤖 어시스턴트 응답
+        with st.chat_message("assistant"):
+            try:
+                stream = client.chat.completions.create(
+                    model=st.session_state["openai_model"],
+                    messages=[{"role": m["role"], "content": m["content"]} for m in messages],
+                    stream=True,
+                )
+
+                full_response = ""
+                placeholder = st.empty()
+
+                for chunk in stream:
+                    content = getattr(chunk.choices[0].delta, "content", None)
+                    if content:
+                        full_response += content
+                        placeholder.markdown(full_response)
+
+                messages.append({"role": "assistant", "content": full_response})
+
+            except RateLimitError:
+                st.error("⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.")
+            except Exception as e:
+                st.error(f"❌ 오류 발생: {e}")
