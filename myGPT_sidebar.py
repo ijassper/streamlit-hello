@@ -1,7 +1,23 @@
 from openai import OpenAI, RateLimitError
 import streamlit as st
 
+# 페이지 설정 및 커스텀 CSS 주입
 st.set_page_config(page_title="나만의 챗GPT", layout="wide")
+
+# CSS로 입력창 폭 제한 및 가운데 정렬
+st.markdown("""
+    <style>
+    .block-container {
+        padding-top: 2rem;
+    }
+
+    /* 입력창 영역을 감싸는 div */
+    [data-testid="stChatInput"] {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 st.title("GPT만들기 프로젝트")
 
