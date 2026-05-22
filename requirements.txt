@@ -1,5 +1,6 @@
-streamlit
+streamlit>=1.32.0
 openai
-pandas
+pandas>=2.0.0
 openpyxl
 streamlit_feedback
+plotly>=5.18.0
